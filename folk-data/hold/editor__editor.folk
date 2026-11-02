@@ -3,4 +3,4 @@ builtin-programs/editor/editor.folk
 buffer-for:3 {builtin-programs/editor/editor.folk claims editor buffer for 3 is {Wish $this is outlined blue
 }}
 {font-options-of:0 editor:3} {builtin-programs/editor/editor.folk claims editor {0 editor} on program 3 has font options with scale 0.003}
-{font-options-of:2 editor:3} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 3 has font options with scale 0.0137849189591}
+{font-options-of:2 editor:3} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 3 has font options with scale 0.0103568136432}
