@@ -1,0 +1,41 @@
+# Bildschirmschoner mit Verzögerung.
+# Der Schoner erscheint erst, wenn SAVER_DELAY lang kein Programm erkannt wurde.
+# Kurze Erkennungsaussetzer lassen ihn so nicht mehr aufflackern.
+
+# Verzögerung bis zum Start des Bildschirmschoners, nur in ms (z. B. 500ms, 3000ms, 10000ms)
+set SAVER_DELAY 3000ms
+
+# Solange irgendein Programm erkannt wird, wird dieser Claim erneuert.
+# Er bleibt nach dem letzten Erkennen noch SAVER_DELAY lang bestehen.
+When tag /something/ has a program {
+    Claim -keep $SAVER_DELAY $this has recently seen a program
+}
+
+When /nobody/ has recently seen a program & \
+     display /disp/ has width /displayWidth/ height /displayHeight/ {
+    puts "Starting display-saver"
+
+    set cx [/ $displayWidth 2.0]
+    set cy [* $displayHeight 0.3]
+    set host [info hostname]
+    set msg "Welcome to Folk\n$host"
+
+    Wish to draw text onto $disp with \
+        x $cx \
+        y $cy \
+        text $msg \
+        color green \
+        scale 80
+
+    set borderPoints [list \
+        [list 0 0] \
+        [list $displayWidth 0] \
+        [list $displayWidth $displayHeight] \
+        [list 0 $displayHeight] \
+        [list 0 0]]
+
+    Wish to draw a line onto $disp with points $borderPoints width 6 color white
+}
+
+# Schaltet den eingebauten Bildschirmschoner (builtin-programs/display-saver.folk) ab
+Claim $this has a display saver
