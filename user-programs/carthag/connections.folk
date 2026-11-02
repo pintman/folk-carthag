@@ -18,37 +18,6 @@
 # Die Kurzform ohne Optionen leitet das Builtin bereits auf
 # `… from centroid to centroid` weiter; das fangen die Regeln hier ab.
 
-# Ankerpunkt (3D, Display-Raum) aus den 4 Ecken eines Quads.
-fn connectionsMid {a b} {
-    lmap x $a y $b { expr {($x + $y) / 2.0} }
-}
-fn connectionsAnchor {vertices name} {
-    lassign $vertices tl tr br bl
-    switch $name {
-        centroid    { return [connectionsMid [connectionsMid $tl $br] [connectionsMid $tr $bl]] }
-        top         { return [connectionsMid $tl $tr] }
-        bottom      { return [connectionsMid $bl $br] }
-        left        { return [connectionsMid $tl $bl] }
-        right       { return [connectionsMid $tr $br] }
-        topleft     { return $tl }
-        topright    { return $tr }
-        bottomleft  { return $bl }
-        bottomright { return $br }
-        default     { error "connections: unbekannter Ankerpunkt '$name'" }
-    }
-}
-
-# Gefülltes Dreieck (Pfeilspitze) mit Spitze in Richtung angle (Bogenmaß).
-fn connectionsArrowHead {center angle size} {
-    lassign $center cx cy
-    set pts {}
-    foreach da {0 2.0944 -2.0944} {
-        set a [expr {$angle + $da}]
-        lappend pts [list [expr {$cx + $size*cos($a)}] [expr {$cy + $size*sin($a)}]]
-    }
-    return $pts
-}
-
 When the quad library is /quadLib/ &\
      the pose library is /poseLib/ &\
      the quad changer is /quadChange/ &\
@@ -56,6 +25,37 @@ When the quad library is /quadLib/ &\
      display /disp/ has intrinsics /intr/ {
 
     fn quadChange
+
+    # Ankerpunkt (3D, Display-Raum) aus den 4 Ecken eines Quads.
+    fn connectionsMid {a b} {
+        lmap x $a y $b { expr {($x + $y) / 2.0} }
+    }
+    fn connectionsAnchor {vertices name} {
+        lassign $vertices tl tr br bl
+        switch $name {
+            centroid    { return [connectionsMid [connectionsMid $tl $br] [connectionsMid $tr $bl]] }
+            top         { return [connectionsMid $tl $tr] }
+            bottom      { return [connectionsMid $bl $br] }
+            left        { return [connectionsMid $tl $bl] }
+            right       { return [connectionsMid $tr $br] }
+            topleft     { return $tl }
+            topright    { return $tr }
+            bottomleft  { return $bl }
+            bottomright { return $br }
+            default     { error "connections: unbekannter Ankerpunkt '$name'" }
+        }
+    }
+
+    # Gefülltes Dreieck (Pfeilspitze) mit Spitze in Richtung angle (Bogenmaß).
+    fn connectionsArrowHead {center angle size} {
+        lassign $center cx cy
+        set pts {}
+        foreach da {0 2.0944 -2.0944} {
+            set a [expr {$angle + $da}]
+            lappend pts [list [expr {$cx + $size*cos($a)}] [expr {$cy + $size*sin($a)}]]
+        }
+        return $pts
+    }
 
     When /anyone/ wishes /source/ is connected to /sink/ /...options/ &\
          /source/ has quad /q1/ & /sink/ has quad /q2/ {
