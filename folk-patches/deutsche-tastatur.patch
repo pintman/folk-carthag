@@ -37,11 +37,6 @@ Anwenden
   git apply --check ~/folk-patches/deutsche-tastatur.patch
   git apply ~/folk-patches/deutsche-tastatur.patch
   # danach Folk neu starten
-
-Falls `git apply` nach Upstream-Änderungen fehlschlägt:
-  git apply --3way ~/folk-patches/deutsche-tastatur.patch
-oder die Änderungen anhand des Diffs unten von Hand übertragen.
-
 diff --git a/builtin-programs/editor/editor.folk b/builtin-programs/editor/editor.folk
 index 134f5cd..fb4af70 100644
 --- a/builtin-programs/editor/editor.folk
@@ -72,7 +67,7 @@ index 134f5cd..fb4af70 100644
                              set textScale [* $textScale 1.1]
  
 diff --git a/builtin-programs/keyboard.folk b/builtin-programs/keyboard.folk
-index 33d4594..d63f999 100644
+index 33d4594..60486b8 100644
 --- a/builtin-programs/keyboard.folk
 +++ b/builtin-programs/keyboard.folk
 @@ -148,7 +148,10 @@ When /keyboard/ is a keyboard device {
@@ -82,7 +77,7 @@ index 33d4594..d63f999 100644
 -            set modKeyNotHeld [expr {$mods <= 1}] ;# excluding Shift
 +            # Only Control (4) and Alt (8) suppress printable chars;
 +            # Shift (1) and AltGr (2) produce characters (e.g. German
-+            # layout: AltGr+ß = \, AltGr+7 = {, AltGr+q = @).
++            # layout: backslash, braces, brackets, at-sign need AltGr).
 +            set modKeyNotHeld [expr {($mods & ~3) == 0}]
              if {$keychar ne "" && $modKeyNotHeld} {
                  dict set options printable $keychar

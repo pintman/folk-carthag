@@ -11,5 +11,7 @@ buffer-for:3 {when {
 {font-options-of:2 editor:3} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 3 has font options with scale 0.00778122738032}
 buffer-for:5 {builtin-programs/editor/editor.folk claims editor buffer for 5 is {# blank
 Wish $this is titled "
-hohoho"}}
+hohoho"
+
+}}
 {font-options-of:2 editor:5} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 5 has font options with scale 0.00941528513018}
