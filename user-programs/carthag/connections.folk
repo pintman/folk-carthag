@@ -1,0 +1,125 @@
+# Verbindungen (Linie + Pfeil) zwischen zwei Blättern – Nachbau von
+# builtin-programs/connections.folk auf Basis von `has quad`.
+# Das Original wartet auf `has region`, das seit Folk-Commit 84ddce5b
+# (2024-08) niemand mehr claimt, und zeichnet daher nichts.
+#
+# Benutzung:
+#   Wish $this is connected to $p
+#   Wish $this is connected to $p from right to left color red width 4
+#   Wish $this is dynamically connected to $p color green
+#
+# Optionen:
+#   from, to  Ankerpunkt: centroid (Standard), top, bottom, left, right,
+#             topleft, topright, bottomleft, bottomright
+#   color     Farbe (Standard: grey bzw. white bei dynamisch)
+#   width     Linienbreite in Projektor-Pixeln (Standard: 2 bzw. 1)
+#   layer     Zeichenebene (Standard: 0)
+#
+# Die Kurzform ohne Optionen leitet das Builtin bereits auf
+# `… from centroid to centroid` weiter; das fangen die Regeln hier ab.
+
+# Ankerpunkt (3D, Display-Raum) aus den 4 Ecken eines Quads.
+fn connectionsMid {a b} {
+    lmap x $a y $b { expr {($x + $y) / 2.0} }
+}
+fn connectionsAnchor {vertices name} {
+    lassign $vertices tl tr br bl
+    switch $name {
+        centroid    { return [connectionsMid [connectionsMid $tl $br] [connectionsMid $tr $bl]] }
+        top         { return [connectionsMid $tl $tr] }
+        bottom      { return [connectionsMid $bl $br] }
+        left        { return [connectionsMid $tl $bl] }
+        right       { return [connectionsMid $tr $br] }
+        topleft     { return $tl }
+        topright    { return $tr }
+        bottomleft  { return $bl }
+        bottomright { return $br }
+        default     { error "connections: unbekannter Ankerpunkt '$name'" }
+    }
+}
+
+# Gefülltes Dreieck (Pfeilspitze) mit Spitze in Richtung angle (Bogenmaß).
+fn connectionsArrowHead {center angle size} {
+    lassign $center cx cy
+    set pts {}
+    foreach da {0 2.0944 -2.0944} {
+        set a [expr {$angle + $da}]
+        lappend pts [list [expr {$cx + $size*cos($a)}] [expr {$cy + $size*sin($a)}]]
+    }
+    return $pts
+}
+
+When the quad library is /quadLib/ &\
+     the pose library is /poseLib/ &\
+     the quad changer is /quadChange/ &\
+     display /disp/ has width /w/ height /h/ &\
+     display /disp/ has intrinsics /intr/ {
+
+    fn quadChange
+
+    When /anyone/ wishes /source/ is connected to /sink/ /...options/ &\
+         /source/ has quad /q1/ & /sink/ has quad /q2/ {
+        if {$source eq $sink} { return }
+
+        # Ankerpunkte: Quad -> Display-Raum -> Projektor-Pixel
+        set v1 [$quadLib vertices [quadChange $q1 "display $disp"]]
+        set v2 [$quadLib vertices [quadChange $q2 "display $disp"]]
+        set a [$poseLib project $intr $w $h \
+                   [connectionsAnchor $v1 [dict getdef $options from centroid]]]
+        set b [$poseLib project $intr $w $h \
+                   [connectionsAnchor $v2 [dict getdef $options to centroid]]]
+        set color [dict getdef $options color grey]
+        set width [dict getdef $options width 2]
+        set layer [dict getdef $options layer 0]
+
+        Wish to draw a line onto $disp with \
+            points [list $a $b] width $width color $color layer $layer
+
+        set d [vec2 sub $b $a]
+        set angle [expr {atan2([lindex $d 1], [lindex $d 0])}]
+        lassign [connectionsArrowHead [vec2 scale [vec2 add $a $b] 0.5] $angle 20] p0 p1 p2
+        Wish to draw a triangle onto $disp with \
+            p0 $p0 p1 $p1 p2 $p2 color $color layer $layer
+    }
+
+    When /anyone/ wishes /source/ is dynamically connected to /sink/ /...options/ &\
+         /source/ has quad /q1/ & /sink/ has quad /q2/ {
+        if {$source eq $sink} { return }
+
+        # Ankerpunkte: Quad -> Display-Raum -> Projektor-Pixel
+        set v1 [$quadLib vertices [quadChange $q1 "display $disp"]]
+        set v2 [$quadLib vertices [quadChange $q2 "display $disp"]]
+        set a [$poseLib project $intr $w $h \
+                   [connectionsAnchor $v1 [dict getdef $options from centroid]]]
+        set b [$poseLib project $intr $w $h \
+                   [connectionsAnchor $v2 [dict getdef $options to centroid]]]
+        set color [dict getdef $options color white]
+        set width [dict getdef $options width 1]
+        set layer [dict getdef $options layer 0]
+
+        Wish to draw a line onto $disp with \
+            points [list $a $b] width $width color $color layer $layer
+
+        set distance [vec2 distance $a $b]
+        if {$distance < 1} { return }
+        set dir [vec2 normalize [vec2 sub $b $a]]
+        set angle [expr {atan2([lindex $dir 1], [lindex $dir 0])}]
+
+        set speed 75
+        set spacing 50
+        set maxsize 25
+        When the clock time is /t/ {
+            set offset [expr {round($t*$speed) % $spacing}]
+            for {set p $offset} {$p < $distance} {incr p $spacing} {
+                # Jim-expr kennt kein min(): Größe wächst zur Mitte hin
+                set edge [expr {$p < $distance - $p ? $p : $distance - $p}]
+                set s [expr {0.2*$edge < $maxsize ? 0.2*$edge : $maxsize}]
+                if {$s < 1} { continue }
+                set c [vec2 add $a [vec2 scale $dir $p]]
+                lassign [connectionsArrowHead $c $angle $s] p0 p1 p2
+                Wish to draw a triangle onto $disp with \
+                    p0 $p0 p1 $p1 p2 $p2 color $color layer $layer
+            }
+        }
+    }
+}

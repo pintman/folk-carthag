@@ -140,6 +140,15 @@ When $this points up at /p/ {
 # Richtung: up, down, left, right; optional Reichweite:
 When $this points right with length 0.5 at /p/ { … }
 
+# Linie mit Pfeil zu einem anderen Blatt (user-programs/carthag/connections.folk)
+# $p = ID des Zielblatts, z. B. aus `When … /p/` oder direkt eine Tag-Nummer
+When $this points right at /p/ {
+    Wish $this is connected to $p from right to left color red width 4
+}
+Wish $this is connected to 45001                         ;# festes Zielblatt
+Wish $this is dynamically connected to 45001 color green ;# wandernde Pfeile
+# Ankerpunkte: centroid, top, bottom, left, right, topleft, topright, …
+
 # Zeit (Sekunden) für Animationen
 When the clock time is /t/ {
     Wish $this is labelled [clock format [expr {int($t)}] -format %T]
