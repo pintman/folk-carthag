@@ -1,1 +1,0 @@
-- [folk_boot_guitar.wav](https://freesound.org/people/SergeQuadrado/sounds/817421/) by SergeQuadrado is licensed under a Creative Commons Attribution NonCommercial 4.0 License

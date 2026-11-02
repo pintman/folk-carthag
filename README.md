@@ -21,7 +21,7 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 |---|---|
 | `folk-data/program/` | Gedruckte Programme: `N.folk` (Code), `N.meta.folk` (Metadaten), `N.pdf`/`N.ps` (Druckvorlage) |
 | `folk-data/hold/` | Persistierter Zustand: `calibration` (Kamera/Projektor), `web__setup.folk` (Setup), `print.folk` |
-| `user-programs/` | Eigene Programme, die Folk beim Start lädt |
+| `user-programs/carthag/` | Eigene Programme von carthag, die Folk beim Start lädt (andere Hosts nicht gesichert) |
 | `folk-patches/` | Lokale Patches am Folk-Quellcode (z. B. deutsche Tastatur), Anleitung jeweils im Patch-Kopf |
 
 Nicht gesichert: `folk-data/trocr/` (TrOCR-Modell, wird neu geladen).
@@ -38,7 +38,7 @@ Alte Stände bleiben in der git-History.
 Folk auf carthag stoppen, dann:
 
     rsync -avz folk-data/     folk@carthag.local:/home/folk/folk-data/
-    rsync -avz user-programs/ folk@carthag.local:/home/folk/folk/user-programs/
+    rsync -avz user-programs/carthag/ folk@carthag.local:/home/folk/folk/user-programs/carthag/
     rsync -avz folk-patches/  folk@carthag.local:/home/folk/folk-patches/
 
 Patches danach im Folk-Repo anwenden:
