@@ -1,16 +1,1 @@
-#When $this has \
-#  camera slice /s/ {
-#  Wish $this displays \
-#    camera slice $s
-#}
-
-
-
-
-
-Wish $this runs Unix command "date"
-When $this has Unix output \
-  lines /l/ {
-  Wish $this is labelled \
-  [join $l \n]
-}
+Wish $this is connected to 4
