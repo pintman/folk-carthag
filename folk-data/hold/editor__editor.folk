@@ -9,9 +9,7 @@ buffer-for:3 {when {
 } origMaxCursorX 24 vpWidth 41 vpY 0 vpHeight 16 vpSize {41 16} clipboard {} isNavKey 0 undoStack {} selectionHandled false cursor 0 selAnchor {} vpPos {0 0} hasShift 0 resetBuffer true isRedo false textOptions {scale 0.00778122738032} maxCursorX 0 origCursor 33 vpX 0}}}
 {font-options-of:0 editor:3} {builtin-programs/editor/editor.folk claims editor {0 editor} on program 3 has font options with scale 0.003}
 {font-options-of:2 editor:3} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 3 has font options with scale 0.00778122738032}
-buffer-for:5 {builtin-programs/editor/editor.folk claims editor buffer for 5 is {# blank
-Wish $this is titled "
-hohoho"
-
-}}
-{font-options-of:2 editor:5} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 5 has font options with scale 0.00941528513018}
+buffer-for:5 {builtin-programs/editor/editor.folk claims editor buffer for 5 is #When\ \$this\ has\ \\\n#\ \ camera\ slice\ /s/\ \{\n#\ \ Wish\ \$this\ displays\ \\\n#\ \ \ \ camera\ slice\ \$s\n#\}\n\n\n\n\n\nWish\ \$this\ runs\ Unix\ command\ \"date\"\nWhen\ \$this\ has\ Unix\ output\ \\\n\ \ lines\ /l/\ \{\n\ \ Wish\ \$this\ is\ labelled\ \\\n\ \ \[join\ \$l\ \\n\]\n\}}
+{font-options-of:2 editor:5} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 5 has font options with scale 0.00855935011835}
+buffer-for:4 {builtin-programs/editor/editor.folk claims editor buffer for 4 is When\ \$this\ points\ up\ \\\n\ \ at\ /u/\ \{\n\n\ \ Wish\ \$this\ is\ labelled\ \\\n\ \ \"oben\ ist\ \$u\"\n\}}
+{font-options-of:2 editor:4} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 4 has font options with scale 0.00707384307302}
