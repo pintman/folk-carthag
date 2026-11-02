@@ -11,8 +11,14 @@ als Sensoren/Aktoren über MQTT an Folk anbinden.
       Dienst aktivieren, Port 1883; Test mit `mosquitto_sub`/`mosquitto_pub`
 - [ ] Bridge `user-programs/carthag/mqtt.folk`: Wish zum Publizieren,
       Claims für eingehende Nachrichten
-- [ ] Prüfen: Artikel nutzt Tcl-MQTT-Bibliothek (Tcl 8.6). Aktuelles Folk läuft
-      auf Jim Tcl → evtl. stattdessen `mosquitto_sub`/`mosquitto_pub` als
-      Unix-Prozess oder libmosquitto per C-FFI
+- [ ] Umsetzung über `mosquitto_sub`/`mosquitto_pub` als Unix-Prozess
+      (Artikel nutzt Tcl-MQTT-Bibliothek für Tcl 8.6 mit TclOO/Coroutinen –
+      läuft nicht unter Jim Tcl):
+  - Empfangen: `mosquitto_sub -v -t '#'` dauerhaft starten, Ausgabe
+    zeilenweise (`topic payload`) lesen → `Claim mqtt topic /t/ has message /m/`
+  - Senden: `Wish mqtt publishes /m/ on topic /t/` → `mosquitto_pub -t $t -m $m`
+  - Vorhandenes `Wish $this runs Unix command …` nutzen oder eigenes
+    `open "|mosquitto_sub …"` mit `$f readable`
+  - Später ggf. libmosquitto per C-FFI, falls Performance nötig
 - [ ] Optional: Websocket-Listener in Mosquitto für MQTT.js-Webseiten
 - [ ] Beispiel: Button am Pico W (MicroPython) → Label auf Blatt
