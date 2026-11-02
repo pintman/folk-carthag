@@ -1,4 +1,4 @@
-Deutsche Tastatur: Keymap-Fix + Strg+/- Zoom im Editor
+Deutsche Tastatur: Keymap-Fix, AltGr-Zeichen + Strg+/- Zoom im Editor
 =======================================================
 
 Erstellt: 2026-11-02, getestet auf Folk-Commit 11121f5
@@ -11,12 +11,17 @@ Problem
    AltGr+E -> "Control_e").
 2. builtin-programs/editor/editor.folk: Zoom-In reagierte nur auf "equal"
    (US-Layout). Auf deutscher Tastatur liefert Strg++ "Control_asciicircum".
+3. builtin-programs/keyboard.folk: Mit gedrücktem AltGr wurde kein
+   druckbares Zeichen erzeugt (nur Shift war erlaubt). Damit fehlten
+   u. a. \ { } [ ] @ | ~ (AltGr+ß/7/0/8/9/q/</+).
 
 Lösung
 ------
 - keymap.tcl: `incr modi` vor das `continue` verschoben (beide Schleifen).
 - editor.folk: Zoom-In auf equal / Control_equal / Control_asciicircum /
   KP_Add, Zoom-Out zusätzlich auf KP_Subtract.
+- keyboard.folk: printable nur noch bei Strg/Alt unterdrücken,
+  nicht bei Shift/AltGr.
 
 Voraussetzung
 -------------
@@ -66,6 +71,22 @@ index 134f5cd..fb4af70 100644
                              set textScale [dict get $textOptions scale]
                              set textScale [* $textScale 1.1]
  
+diff --git a/builtin-programs/keyboard.folk b/builtin-programs/keyboard.folk
+index 33d4594..d63f999 100644
+--- a/builtin-programs/keyboard.folk
++++ b/builtin-programs/keyboard.folk
+@@ -148,7 +148,10 @@ When /keyboard/ is a keyboard device {
+             set now $([clock milliseconds] / 1000.0)
+             set options [dict create timestamp $now]
+             if {$mods & 1} { dict set options shift 1 }
+-            set modKeyNotHeld [expr {$mods <= 1}] ;# excluding Shift
++            # Only Control (4) and Alt (8) suppress printable chars;
++            # Shift (1) and AltGr (2) produce characters (e.g. German
++            # layout: AltGr+ß = \, AltGr+7 = {, AltGr+q = @).
++            set modKeyNotHeld [expr {($mods & ~3) == 0}]
+             if {$keychar ne "" && $modKeyNotHeld} {
+                 dict set options printable $keychar
+             }
 diff --git a/lib/keymap.tcl b/lib/keymap.tcl
 index 131a289..23b0918 100644
 --- a/lib/keymap.tcl

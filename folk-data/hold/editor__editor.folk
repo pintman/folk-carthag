@@ -1,6 +1,15 @@
 builtin-programs/editor/editor.folk
 
-buffer-for:3 {builtin-programs/editor/editor.folk claims editor buffer for 3 is {Wish $this is outlined blue
-}}
+buffer-for:3 {when {
+                    When $program has program code /originalCode/ {
+                        Claim editor buffer for $program is $originalCode
+                    }
+                } with environment {{this builtin-programs/editor/editor.folk} {} {} {programDir /home/folk/folk-data/program} {} {utils <library:/tmp/editorUtilsLib_Q21dTT.tcl>} {defaults { textScale 0.01 }} {keyboard 2 kbPath /dev/input/by-path/pci-0000:00:14.0-usb-0:1:1.0-event-kbd anything {locale us}} {} {editor {2 editor}} {} {anything {textScale 0.01}} {} {program 3} {} {key Control_r keyState down options {timestamp 1793617338.62}} {isUndo false origCode {Wish $this is outlined blue
+} lastEditType {} redoStack {} code {Wish $this is outlined blue
+} origMaxCursorX 24 vpWidth 41 vpY 0 vpHeight 16 vpSize {41 16} clipboard {} isNavKey 0 undoStack {} selectionHandled false cursor 0 selAnchor {} vpPos {0 0} hasShift 0 resetBuffer true isRedo false textOptions {scale 0.00778122738032} maxCursorX 0 origCursor 33 vpX 0}}}
 {font-options-of:0 editor:3} {builtin-programs/editor/editor.folk claims editor {0 editor} on program 3 has font options with scale 0.003}
 {font-options-of:2 editor:3} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 3 has font options with scale 0.00778122738032}
+buffer-for:5 {builtin-programs/editor/editor.folk claims editor buffer for 5 is {# blank
+Wish $this is titled "
+hohoho"}}
+{font-options-of:2 editor:5} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 5 has font options with scale 0.00941528513018}
