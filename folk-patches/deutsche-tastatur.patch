@@ -1,0 +1,98 @@
+Deutsche Tastatur: Keymap-Fix + Strg+/- Zoom im Editor
+=======================================================
+
+Erstellt: 2026-11-02, getestet auf Folk-Commit 11121f5
+
+Problem
+-------
+1. lib/keymap.tcl: Beim Einlesen von `dumpkeys` wurden VoidSymbol-Felder
+   übersprungen, ohne den Spaltenzähler (modi) zu erhöhen. Dadurch waren
+   Modifier-Belegungen verschoben (z. B. Strg++ -> "asterisk",
+   AltGr+E -> "Control_e").
+2. builtin-programs/editor/editor.folk: Zoom-In reagierte nur auf "equal"
+   (US-Layout). Auf deutscher Tastatur liefert Strg++ "Control_asciicircum".
+
+Lösung
+------
+- keymap.tcl: `incr modi` vor das `continue` verschoben (beide Schleifen).
+- editor.folk: Zoom-In auf equal / Control_equal / Control_asciicircum /
+  KP_Add, Zoom-Out zusätzlich auf KP_Subtract.
+
+Voraussetzung
+-------------
+Folk liest die Konsolen-Tastaturbelegung des Kernels (der Locale-Name in
+keyboard.folk wird ignoriert). Daher muss das System auf Deutsch stehen:
+  /etc/default/keyboard: XKBLAYOUT="de"
+  ggf.: sudo dpkg-reconfigure keyboard-configuration && sudo setupcon
+Bei der Installation von console-data "3. Keep kernel keymap" wählen.
+
+Anwenden
+--------
+  cd ~/folk
+  git apply --check ~/folk-patches/deutsche-tastatur.patch
+  git apply ~/folk-patches/deutsche-tastatur.patch
+  # danach Folk neu starten
+
+Falls `git apply` nach Upstream-Änderungen fehlschlägt:
+  git apply --3way ~/folk-patches/deutsche-tastatur.patch
+oder die Änderungen anhand des Diffs unten von Hand übertragen.
+
+diff --git a/builtin-programs/editor/editor.folk b/builtin-programs/editor/editor.folk
+index 134f5cd..fb4af70 100644
+--- a/builtin-programs/editor/editor.folk
++++ b/builtin-programs/editor/editor.folk
+@@ -278,17 +278,19 @@ When /keyboard/ is a keyboard with path /kbPath/ /...anything/ &\
+                             sleep 0.25
+                             Hold! -key printing-alert:$editor {}
+                         }
+-                        Control_underscore {
+-                            # ctrl and - (zoom out)
++                        Control_underscore - KP_Subtract {
++                            # ctrl and - (zoom out); KP_Subtract = ctrl and numpad -
+                             set textScale [dict get $textOptions scale]
+                             set textScale [/ $textScale 1.1]
+ 
+                             Hold! -save -key font-options-of:$editor:$program \
+                                 Claim editor $editor on program $program has font options with scale $textScale
+                         }
+-                        equal {
+-                            # Dunno why it registers as equal instead of Control_equal? It works regardless, lol
+-                            # ctrl and + (zoom in)
++                        equal - Control_equal - Control_asciicircum - KP_Add {
++                            # ctrl and + (zoom in):
++                            #   equal/Control_equal = US layout (ctrl and =)
++                            #   Control_asciicircum = German layout (ctrl and +)
++                            #   KP_Add = ctrl and numpad +
+                             set textScale [dict get $textOptions scale]
+                             set textScale [* $textScale 1.1]
+ 
+diff --git a/lib/keymap.tcl b/lib/keymap.tcl
+index 131a289..23b0918 100644
+--- a/lib/keymap.tcl
++++ b/lib/keymap.tcl
+@@ -65,11 +65,11 @@ namespace eval keymap {
+                     set modi 0
+                     foreach key [lrange $line 3 end] {
+                         set mod [lindex $mods $modi]
++                        incr modi
+                         set str [_parseKey $key]
+                         if {$str eq ""} continue
+ 
+                         dict append ksyms "$code $mod" $str
+-                        incr modi
+                     }
+                 }
+             }
+@@ -89,11 +89,11 @@ namespace eval keymap {
+                     set modi 0
+                     foreach key [lrange $line 3 end] {
+                         set mod [lindex $mods $modi]
++                        incr modi
+                         set str [_parseUnicode $key]
+                         if {$str eq ""} continue
+ 
+                         dict append chars "$code $mod" $str
+-                        incr modi
+                     }
+                 }
+             }

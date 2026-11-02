@@ -22,6 +22,7 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 | `folk-data/program/` | Gedruckte Programme: `N.folk` (Code), `N.meta.folk` (Metadaten), `N.pdf`/`N.ps` (Druckvorlage) |
 | `folk-data/hold/` | Persistierter Zustand: `calibration` (Kamera/Projektor), `web__setup.folk` (Setup), `print.folk` |
 | `user-programs/` | Eigene Programme, die Folk beim Start lädt |
+| `folk-patches/` | Lokale Patches am Folk-Quellcode (z. B. deutsche Tastatur), Anleitung jeweils im Patch-Kopf |
 
 Nicht gesichert: `folk-data/trocr/` (TrOCR-Modell, wird neu geladen).
 
@@ -29,7 +30,7 @@ Nicht gesichert: `folk-data/trocr/` (TrOCR-Modell, wird neu geladen).
 
     ./sync.sh
 
-Holt beide Ordner per rsync (`--delete`) und committet Änderungen automatisch.
+Holt die drei Ordner per rsync (`--delete`) und committet Änderungen automatisch.
 Alte Stände bleiben in der git-History.
 
 ## Wiederherstellen
@@ -38,6 +39,11 @@ Folk auf carthag stoppen, dann:
 
     rsync -avz folk-data/     folk@carthag.local:/home/folk/folk-data/
     rsync -avz user-programs/ folk@carthag.local:/home/folk/folk/user-programs/
+    rsync -avz folk-patches/  folk@carthag.local:/home/folk/folk-patches/
+
+Patches danach im Folk-Repo anwenden:
+
+    cd ~/folk && git apply ~/folk-patches/deutsche-tastatur.patch
 
 Bei neuer Hardware/geänderter Projektor- oder Kameraposition
 neu kalibrieren statt `hold/calibration` zurückzuspielen.
