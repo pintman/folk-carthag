@@ -22,6 +22,7 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 | `folk-data/program/` | Gedruckte Programme: `N.folk` (Code), `N.meta.folk` (Metadaten), `N.pdf`/`N.ps` (Druckvorlage) |
 | `folk-data/hold/` | Persistierter Zustand: `calibration` (Kamera/Projektor), `web__setup.folk` (Setup), `print.folk` |
 | `user-programs/carthag/` | Eigene Programme von carthag, die Folk beim Start lädt (andere Hosts nicht gesichert) |
+| `folk-videos/` | Beispielvideos für `video.folk` (Kopie von `~/folk-videos/`, wird nicht per `sync.sh` aktualisiert) |
 | `folk-patches/` | Lokale Patches am Folk-Quellcode (z. B. deutsche Tastatur), Anleitung jeweils im Patch-Kopf |
 
 Nicht gesichert: `folk-data/trocr/` (TrOCR-Modell, wird neu geladen).
@@ -40,6 +41,7 @@ Folk auf carthag stoppen, dann:
     rsync -avz folk-data/     folk@carthag.local:/home/folk/folk-data/
     rsync -avz user-programs/carthag/ folk@carthag.local:/home/folk/folk/user-programs/carthag/
     rsync -avz folk-patches/  folk@carthag.local:/home/folk/folk-patches/
+    rsync -avz folk-videos/   folk@carthag.local:/home/folk/folk-videos/
 
 Patches danach im Folk-Repo anwenden:
 
@@ -129,6 +131,32 @@ Wish $this draws toy shader { … GLSL im ShaderToy-Stil … }
 ```
 
 JPEG, PNG und GIF (animiert) werden unterstützt.
+
+### Videos abspielen
+
+Eigenes Programm `user-programs/carthag/video.folk` (nicht Teil von Folk). Das Video
+erscheint in einem Fenster neben der Karte und wandert mit, wenn die Karte verschoben
+oder gedreht wird.
+
+```tcl
+Wish $this plays video "demo.mp4"                    ;# aus ~/folk-videos/, rechts
+Wish $this plays video "tiere/katze.mp4" with side below width 30cm
+Wish $this plays video "/home/folk/folk-videos/clip.webm" with side left
+```
+
+- `side`: `right` (Standard), `left`, `above`, `below`.
+- `width`: Fensterbreite in `mm`, `cm` oder `m` (Standard `20cm`); die Höhe ergibt
+  sich aus dem Seitenverhältnis.
+- Videodateien auf carthag nach `~/folk-videos/` kopieren (relativer Name) oder
+  absoluten Pfad angeben. Alles, was `ffmpeg` dekodieren kann (MP4/H.264, WebM,
+  MKV, MOV …); Hochkant-Handyvideos werden richtig gedreht.
+- Fehlende oder kaputte Dateien: Fehlermeldung an der Karte.
+- Einschränkungen: stumm, Endlosschleife ohne Pause/Spulen; Karte weg = Stopp,
+  neu auflegen = von vorn. Dekodiert wird auf max. 640 px Breite bei 25 fps
+  (unter Last weniger). `~/folk-videos/` wird **nicht** per `sync.sh` gesichert.
+- Beispiele im Repo unter `folk-videos/`: `demo.mp4` (quer), `hoch.mp4` (hochkant),
+  `tiere/katze.mp4`, `clip.webm`; zum Testen der Fehlermeldungen `kaputt.mp4`
+  (keine Videodatei) und `nurton.mp4` (nur Ton).
 
 ### Mit anderen Blättern interagieren
 

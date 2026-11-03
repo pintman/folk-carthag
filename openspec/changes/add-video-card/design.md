@@ -54,33 +54,60 @@
    werden soll. Liefert ffprobe keinen Videostream → Fehler „nicht abspielbar“ an der
    Karte (Spec „Datei nicht abspielbar“). Datei vorher mit `file exists` prüfen → Fehler
    mit Pfad (Spec „Datei fehlt“).
+   *Nachtrag (Test auf carthag):* Handyvideos mit Rotations-Metadaten (90°/270°) meldet
+   ffprobe mit kodierter Größe, ffmpeg dreht aber automatisch. Mit festem `scale=W:H`
+   bliebe die Bytegröße zwar stimmig, das Bild wäre jedoch verzerrt. Daher zusätzlich
+   `stream_side_data=rotation` abfragen und W/H bei ±90° tauschen. Ausgabeformat
+   `-of default=nw=1` (Schlüssel=Wert) statt CSV, weil die Zahl der Felder variiert.
+   Handtest: 10-s-Video ergibt exakt 10·25·640·360·3 Byte in ≈ 9,6 s.
 
-3. **Einlesen in Jim, Umwandeln in `Image` per kleiner C-Funktion.**
-   Prozess wie `unix-commands.folk` mit `open "|ffmpeg …" rb`, `fconfigure
-   -blocking 0 -translation binary`. Pro Tick (`When the clock time is /t/`) alle
-   verfügbaren Bytes lesen, in einem Puffer sammeln; ist mindestens ein vollständiges
-   Bild da, das *neueste* vollständige Bild nehmen (ältere verwerfen, falls Folk
-   hinterherhinkt). Eine C-Funktion `frameFromBytes {Jim_Obj* bytes int offset int w int h
-   int uniq} Image` kopiert in ein neues `Image` (3 Komponenten, wie Kamera-RGB).
-   Veröffentlichung: `Hold! -key [list video $p frame] Claim $p has video frame $im
-   -destructor [list $imageLib imageFree $im]`, `uniq` = laufende Bildnummer.
-   *Alternative:* Prozess und Lesen komplett in C (fork/exec, read in Image-Puffer) –
-   spart Kopie über Jim-Strings; als Optimierung, falls Profiling es verlangt.
+3. **C-Reader für Prozess, Pipe und Puffer; Abfrage pro Clock-Tick.**
+   *(Umgestellt während der Umsetzung – ursprünglich Einlesen in Jim.)*
+   Eine kleine C-Bibliothek im User-Programm (`$cc extend $imageLib`) startet ffmpeg per
+   `posix_spawnp` (stdin `/dev/null`, stdout in eine `pipe2(O_CLOEXEC)`, Pipe-Puffer per
+   `F_SETPIPE_SZ` auf 1 MiB, stderr in eine Tempdatei, Signalmaske zurückgesetzt) und
+   hält Lese-Ende, PID, einen Puffer für zwei Bilder und einen Bildzähler in einem
+   Struct mit Mutex (`VideoReader*`). `videoPoll` liest nicht-blockierend alles
+   Verfügbare, verwirft ältere Bilder und liefert das *neueste* vollständige als neues
+   `Image` (3 Komponenten, `uniq` = Bildnummer) oder ein leeres. Aufgerufen pro Tick in
+   `When the clock time is /t/` (~9 ms) im Wish-Body; neues Bild →
+   `Hold! -key [list video $p $path frame] Claim $p has video frame $im
+   -destructor [list $imageLib imageFree $im]`.
+   *Warum nicht in Jim:* (a) Ein `while`-Leseloop im Wish-Body (Muster
+   `unix-commands.folk`) endet nie; Folk räumt solche Matches nicht zuverlässig ab –
+   beim Reload von `video.folk` und sogar beim Entfernen der Karte liefen alte
+   Schleifen samt ffmpeg weiter und schrieben in denselben Hold (beobachtet: nicht
+   monotone Bildnummern, verwaiste Prozesse). (b) Jim-Kanäle gehören dem
+   Interpreter eines Worker-Threads; ein Clock-Tick-Body läuft in beliebigen Workern
+   und könnte `$fd` nicht nutzen. (c) Jim ist mit UTF-8 gebaut, Binärdaten müssten mit
+   Byte-Offsets in C geschnitten werden. Nebeneffekt: weniger Kopien → volle 25 fps
+   (Jim-Variante: 11–18 fps).
 
 4. **Endlosschleife macht ffmpeg (`-stream_loop -1`); EOF bedeutet Fehler.** Da ffmpeg
-   nie regulär endet, ist `eof $fd` immer ein Abbruch (Decoderfehler, Datei weg). Dann
-   Kanal schließen, ffmpegs stderr-Meldung (separat umgeleitet und gelesen) als Fehler an
-   der Karte melden – kein automatischer Neustart, keine Dauerschleife.
+   nie regulär endet, ist EOF der Pipe immer ein Abbruch (Decoderfehler, Prozess weg).
+   `videoTakeEof` meldet das genau einmal und sammelt den Prozess ein; der Tick-Body
+   entfernt den Bild-Hold (Fenster weg) und hält ffmpegs stderr-Meldung als
+   `$p has error …` (Hold, damit sie über den Tick hinaus bleibt) – kein Neustart.
    *Alternative:* ohne `-stream_loop` und Neustart bei EOF – mehr Logik, Startverzögerung
    an jedem Schleifenübergang.
+   *Nachtrag (Test):* Gelöschte Dateien spielt ffmpeg weiter (Inode bleibt offen),
+   gekürzte Dateien spielt es ohne Fehler bis zur Bruchstelle in Schleife – beides
+   erzeugt kein EOF und damit keine Fehlermeldung; akzeptiert. Der EOF-Pfad selbst
+   (ffmpeg per `kill -9` beendet) meldet den Fehler an der Karte, entfernt das Fenster
+   und startet nicht neu.
 
 5. **Lebensdauer an den Wish koppeln.** Alles hängt in einem
    `When /someone/ wishes /p/ plays video /path/ with /...options/`-Body (plus Kurzform
-   ohne Optionen, die auf die Langform weiterleitet, analog `displays image`).
-   `On unmatch` schließt den Kanal und sendet `SIGTERM` an die PID (wie
-   `unix-commands.folk`). Karte weg → Wish weg → Prozess beendet, Hold entfernt →
-   Fenster verschwindet; erneutes Auflegen startet einen frischen Prozess (= von vorn).
-   Ein Prozess pro (Karte, Pfad) → mehrere Karten unabhängig.
+   ohne Optionen, die auf die Langform weiterleitet, analog `displays image`). Der Body
+   endet nach dem Start sofort. `On unmatch` ruft `videoClose` (SIGTERM, bis 1 s auf
+   Ende warten, sonst SIGKILL, `waitpid`; Puffer frei, Struct bleibt für evtl. noch
+   laufende Ticks), löscht die stderr-Datei und entfernt Bild- und Fehler-Hold.
+   Karte weg → Wish weg → Prozess beendet → Fenster verschwindet; erneutes Auflegen
+   startet einen frischen Prozess (= von vorn). Ein Prozess pro (Karte, Pfad).
+   *Test:* Entfernen, viermaliger Reload von `video.folk` (Body geändert) während der
+   Wiedergabe: jeweils genau ein neuer Prozess pro Karte, keine Zombies/Waisen,
+   Tempdateien aufgeräumt. Bei unverändertem Body bleibt das Match (und der Prozess)
+   bestehen (Folk dedupliziert identische Statements).
 
 6. **Fenster neben der Karte über die `"image"`-GPU-Pipeline auf dem Display-Canvas.**
    Aus `$p has quad` die Ecken in Display-Raum (Meter) holen (wie `title.folk`), Kanten-
@@ -92,6 +119,10 @@
    `Wish the GPU draws pipeline "image" onto canvas $dispCanvas with arguments
    [list $res $surfaceToClip $gim $a $b $c $d]` nach `Wish the GPU loads image $im as
    texture`. Damit folgt das Fenster Verschiebung und Drehung.
+   *Nachtrag (Test):* Ohne Weiteres flackert das Fenster: Beim Bildwechsel wird die alte
+   Textur verworfen, bevor die neue geladen ist (4 von 30 Screenshots ohne Fenster).
+   Texturladen und Zeichnen daher in `When -atomicallyWithKey [list video $p $path draw]`
+   – das alte Bild bleibt, bis das neue konvergiert ist (danach 30/30 sichtbar).
    *Alternative:* `Wish $p displays image …` auf dem Blatt-Canvas – zeichnet nur innerhalb
    der Karte. *Alternative:* `Wish to draw an image onto $disp` – keine Drehung.
    Längenangaben (`30cm`, `0.3m`) per vorhandener Folk-Einheitenumrechnung parsen; falls
@@ -99,15 +130,19 @@
 
 ## Risks / Trade-offs
 
-- [Kopie von ~0,7 MB pro Bild über Jim-Strings und GPU-Upload pro Bild belasten Folk] →
-  Größe auf 640 px und 25 fps begrenzen; bei Rucklern Bildrate senken oder auf
-  C-Reader (Decision 3, Alternative) umstellen. Messen in den Tasks.
+- [Kopie pro Bild und GPU-Upload pro Bild belasten Folk] → Größe auf 640 px Breite und
+  25 fps begrenzt. *Gemessen (Task 4.2, Quer 640×360 + Hoch 640×1138, ~5 min):*
+  24,5 / 23,7 fps; beide ffmpeg zusammen ~150 % CPU (von 800 %). Folk selbst zeigt
+  schon ohne Video ~666 % (Worker drehen im Leerlauf) und mit Video ~565 % – Folk-CPU
+  ist daher kein brauchbares Lastmaß. Hochformat ist mit 2,2 MB/Bild der teuerste Fall.
 - [Neue Textur pro Bild → Speicherwachstum, falls Freigabe verzögert] → Destructor am
-  Hold gibt Image und Textur frei; Speicher in Tasks über einige Minuten beobachten.
+  Hold gibt Image und Textur frei. *Gemessen:* RSS von folk über 3 min konstant
+  (1 398 848 → 1 398 864 kB).
 - [Folk-Tick langsamer als Video → Bildsprünge] → neuestes Bild gewinnt, Video bleibt
   zeitrichtig.
-- [Zombie-/Waisenprozesse bei Absturz oder Reload] → `On unmatch` + Prüfung mit
-  `pgrep ffmpeg` in Tasks; ffmpeg beendet sich zusätzlich bei SIGPIPE.
+- [Zombie-/Waisenprozesse bei Absturz oder Reload] → `On unmatch` mit `videoClose`
+  (siehe Decision 5, getestet); stirbt Folk, endet ffmpeg beim nächsten Schreiben per
+  SIGPIPE. Kleines Leck: pro Wiedergabe bleibt das Reader-Struct (~100 Byte) stehen.
 - [`-stream_loop` kann je nach Container am Schleifenübergang kurz ruckeln oder
   Zeitstempel springen lassen] → akzeptiert; im Schleifentest beobachten.
 - [Fenster ragt über den Projektionsbereich hinaus] → akzeptiert; Nutzer wählt `side`.
@@ -120,6 +155,14 @@
    es), `mkdir ~/folk-videos` und Testvideo ablegen.
 2. Rollback: `video.folk` entfernen; laufende `ffmpeg`-Prozesse enden über
    `On unmatch`.
+
+## Testhilfe
+
+Ohne gedruckte Karten getestet über virtuelle Karten per Websocket
+(`ws://carthag.local:4273/ws`, gleiche Statements wie der `/new`-Editor: `has quad`,
+`has resolved geometry`, `has program code`) und Screenshots des Folk-Fensters per
+`DISPLAY=:0 ffmpeg -f x11grab`. Nicht abgedeckt: echte Projektion auf den Tisch
+(Lineal, Projektionsgenauigkeit), Tag-Erkennung unter Last.
 
 ## Open Questions
 
