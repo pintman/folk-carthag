@@ -22,3 +22,5 @@ buffer-for:8 {builtin-programs/editor/editor.folk claims editor buffer for 8 is 
 
 }}
 {font-options-of:2 editor:8} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 8 has font options with scale 0.00643076643}
+buffer-for:10 {builtin-programs/editor/editor.folk claims editor buffer for 10 is When\ /q/\ ist\ Quelle\ einer\ Verbindung\ &\ \\\n\ \ \ \ \ /z/\ ist\ Ziel\ einer\ Verbindung\ \{\n\n\ \ Wish\ \$q\ is\ connected\ to\ \$z\n\n\}\n\n}
+{font-options-of:2 editor:10} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 10 has font options with scale 0.00643090909091}
