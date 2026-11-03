@@ -135,6 +135,11 @@
   24,5 / 23,7 fps; beide ffmpeg zusammen ~150 % CPU (von 800 %). Folk selbst zeigt
   schon ohne Video ~666 % (Worker drehen im Leerlauf) und mit Video ~565 % – Folk-CPU
   ist daher kein brauchbares Lastmaß. Hochformat ist mit 2,2 MB/Bild der teuerste Fall.
+  *Tag-Erkennung (gedruckte Karte, je 20 s):* Kamera ~14,8 fps in allen Fällen;
+  Vollbild-Erkennung 0 Videos 14,7/s (45 ms), 1 Video 14,3/s (48 ms), 3 Videos 11,7/s
+  (60 ms); inkrementelle Verfolgung immer ~14,8/s (1–2 ms). Ein Video ist unkritisch,
+  ab drei Videos werden neu aufgelegte Karten etwas später erkannt; liegende Karten
+  folgen weiter flüssig.
 - [Neue Textur pro Bild → Speicherwachstum, falls Freigabe verzögert] → Destructor am
   Hold gibt Image und Textur frei. *Gemessen:* RSS von folk über 3 min konstant
   (1 398 848 → 1 398 864 kB).
@@ -146,6 +151,9 @@
 - [`-stream_loop` kann je nach Container am Schleifenübergang kurz ruckeln oder
   Zeitstempel springen lassen] → akzeptiert; im Schleifentest beobachten.
 - [Fenster ragt über den Projektionsbereich hinaus] → akzeptiert; Nutzer wählt `side`.
+- [Bei `side above` liegt das Fenster über einem Titel (`is titled`, 2 cm über der
+  Karte; Fenster beginnt 1 cm darüber)] → akzeptiert; bei beschrifteten Karten andere
+  Seite wählen.
 - [Kurzes Erkennungs-Flackern der Karte startet Video neu] → akzeptiert (Spec: neu
   auflegen = von vorn); ggf. später `-keep` wie im display-saver.
 
@@ -161,10 +169,13 @@
 Ohne gedruckte Karten getestet über virtuelle Karten per Websocket
 (`ws://carthag.local:4273/ws`, gleiche Statements wie der `/new`-Editor: `has quad`,
 `has resolved geometry`, `has program code`) und Screenshots des Folk-Fensters per
-`DISPLAY=:0 ffmpeg -f x11grab`. Nicht abgedeckt: echte Projektion auf den Tisch
-(Lineal, Projektionsgenauigkeit), Tag-Erkennung unter Last.
+`DISPLAY=:0 ffmpeg -f x11grab`. Projektion, Breite (Lineal), Seiten und Tag-Erkennung
+unter Last danach mit einer gedruckten Karte geprüft.
 
 ## Open Questions
 
 - Liefert `$poseLib project` für Punkte außerhalb der Karte dieselbe Genauigkeit wie für
   Titel/Fußnoten? (Erwartet ja; in Tasks visuell prüfen.)
+  *Antwort (Test mit gedruckter Karte):* Ja – das Fenster sitzt so genau wie Titel und
+  Editor-Umriss. Auf carthag ist die Kalibrierung derzeit um 1–2 cm (am Bildrand und
+  bei schräger Karte mehr) versetzt; dann überlappen Fenster wie Titel teils die Karte.
