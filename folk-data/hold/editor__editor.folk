@@ -11,7 +11,7 @@ buffer-for:3 {when {
 {font-options-of:2 editor:3} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 3 has font options with scale 0.00778122738032}
 buffer-for:5 {builtin-programs/editor/editor.folk claims editor buffer for 5 is Wish\ \$this\ is\ \\\n\ \ connected\ \\\n\ \ to\ 4\ from\ left\ to\ right\ \\\n\ \ color\ red\ width\ 1}
 {font-options-of:2 editor:5} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 5 has font options with scale 0.00855935011835}
-buffer-for:4 {builtin-programs/editor/editor.folk claims editor buffer for 4 is {With $this }}
+buffer-for:4 {builtin-programs/editor/editor.folk claims editor buffer for 4 is {Wish $this is outlined blue}}
 {font-options-of:2 editor:4} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 4 has font options with scale 0.00707384307302}
 {font-options-of:2 editor:2 editor} {builtin-programs/editor/editor.folk claims editor {2 editor} on program {2 editor} has font options with scale 0.01}
 buffer-for:vcard4 {builtin-programs/editor/editor.folk claims editor buffer for vcard4 is {Wish $this plays video "/home/folk/clip.mp4"}}
