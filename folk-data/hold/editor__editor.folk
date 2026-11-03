@@ -16,3 +16,9 @@ buffer-for:4 {builtin-programs/editor/editor.folk claims editor buffer for 4 is 
 {font-options-of:2 editor:2 editor} {builtin-programs/editor/editor.folk claims editor {2 editor} on program {2 editor} has font options with scale 0.01}
 buffer-for:vcard4 {builtin-programs/editor/editor.folk claims editor buffer for vcard4 is {Wish $this plays video "/home/folk/clip.mp4"}}
 {font-options-of:2 editor:vcard4} {builtin-programs/editor/editor.folk claims editor {2 editor} on program vcard4 has font options with scale 0.01}
+buffer-for:9 {builtin-programs/editor/editor.folk claims editor buffer for 9 is When\ /q/\ ist\ Quelle\ einer\ Verbindung\ &\ \\\n\ \ \ \ \ /z/\ ist\ Ziel\ einer\ Verbindung\ \{\n\n\ \ Wish\ \$q\ is\ connected\ to\ \$z\n\n\}\n}
+{font-options-of:2 editor:9} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 9 has font options with scale 0.007073843073}
+buffer-for:8 {builtin-programs/editor/editor.folk claims editor buffer for 8 is {Claim $this ist Ziel einer Verbindung
+
+}}
+{font-options-of:2 editor:8} {builtin-programs/editor/editor.folk claims editor {2 editor} on program 8 has font options with scale 0.00643076643}
