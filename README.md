@@ -109,6 +109,10 @@ Blatt legen, sodass sie nach oben darauf zeigt. Es erscheint ein Editor.
 
 Geänderte Programme zeigen „(edited …)“ als Titel.
 
+**Programme im Browser bearbeiten:** Numer der zugehörigen Seite aufrufen
+unter `http://<folk-rechner>:4273/page/<nr>` Das Programm kann dann im
+Editor bearbeitet und gespeichert werden.
+
 ### Beschriften & Hervorheben
 
 ```tcl
