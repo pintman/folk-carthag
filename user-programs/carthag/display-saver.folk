@@ -11,7 +11,11 @@ When tag /something/ has a program {
     Claim -keep $SAVER_DELAY $this has recently seen a program
 }
 
+# Während einer Kamera-Projektor-Kalibrierung aus: Kalibrier-Tags haben kein
+# Programm, der Schoner würde sonst über das Kalibrierbild malen.
 When /nobody/ has recently seen a program & \
+     /nobody/ wishes to calibrate camera /anyCamera/ to display /anyDisplay/ \
+         using measurements /anyMeasurements/ & \
      display /disp/ has width /displayWidth/ height /displayHeight/ {
     puts "Starting display-saver"
 
