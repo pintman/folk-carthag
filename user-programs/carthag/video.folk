@@ -3,7 +3,8 @@
 #   Wish $this plays video "demo.mp4"
 #   Wish $this plays video "demo.mp4" with side below width 30cm
 #
-# Relative Namen werden in ~/folk-videos/ gesucht, absolute Pfade bleiben.
+# Relative Namen wie bei Audio: <folk>/user-programs/<host>/video/, dann
+# <folk>/video/ (erster Treffer gilt); absolute Pfade bleiben.
 # Optionen: side right|left|above|below (Standard right),
 #           width <Länge> in mm|cm|m (Standard 20cm).
 # Wiedergabe stumm, in Endlosschleife; Karte weg = Stopp, neu auflegen = von vorn.
@@ -184,6 +185,22 @@ When the image library is /imageLib/ &\
     # HACK: das Muster passt auch auf die Kurzform (ohne Optionen).
     if {![info exists options]} { return }
 
+    # Pfadauflösung wie audio.folk (Upstream): absolut bleibt; sonst
+    # <folk>/user-programs/<host>/video/, dann <folk>/video/; erster Treffer gilt.
+    proc resolveVideoPath {name} {
+        if {[string index $name 0] eq "/"} {
+            if {![file exists $name]} { error "video: Datei nicht gefunden: $name" }
+            return $name
+        }
+        set candidates [list \
+            "[pwd]/user-programs/[info hostname]/video/$name" \
+            "[pwd]/video/$name"]
+        foreach c $candidates {
+            if {[file exists $c]} { return $c }
+        }
+        error "video: Datei nicht gefunden: $name (gesucht: [join $candidates {, }])"
+    }
+
     set frameKey [list video $p $path frame]
     set errorKey [list video $p $path error]
 
@@ -199,12 +216,7 @@ When the image library is /imageLib/ &\
         }
         set winWidth [expr {$num * [dict get {mm 0.001 cm 0.01 m 1.0 {} 1.0} $unit]}]
 
-        # Pfad auflösen
-        set file [expr {[string index $path 0] eq "/" ?
-                        $path : "$::env(HOME)/folk-videos/$path"}]
-        if {![file exists $file]} {
-            error "video: Datei nicht gefunden: $file"
-        }
+        set file [resolveVideoPath $path]
 
         # Größe ermitteln (Rotation aus Handy-Metadaten beachten: ffmpeg
         # dreht automatisch, ffprobe meldet die kodierte Größe).
