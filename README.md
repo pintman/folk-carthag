@@ -14,6 +14,7 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 - Auf carthag: Repo unter `/home/folk/folk`, Start mit `make start`
   (bzw. systemd-Service)
 - Webinterface: `http://carthag.local:4273` (Editor, Kalibrierung, Setup)
+- Verschiedene Setups: https://folk.computer/directory
 
 ## Inhalt
 
