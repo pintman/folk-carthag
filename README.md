@@ -14,7 +14,12 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 - Auf carthag: Repo unter `/home/folk/folk`, Start mit `make start`
   (bzw. systemd-Service)
 - Webinterface: `http://carthag.local:4273` (Editor, Kalibrierung, Setup)
+
+## Einrichtung
+
 - Verschiedene Setups: https://folk.computer/directory
+- Hardware (Montage) https://folk.computer/guides/hardware
+  - Schnellstützstangen für Beamer und Webcam als Alternative zum Stativ
 
 ## Inhalt
 
@@ -255,3 +260,4 @@ Wish the web server handles route "/hallo" with handler {
 
 `builtin-programs/demos.folk` enthält kleine Startbeispiele (Tags
 45000–45008): Beschriften, Zeigen, Uhrzeit, Kamerabild.
+	
