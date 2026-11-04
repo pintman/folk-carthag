@@ -17,8 +17,8 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 
 ## Einrichtung
 
-- Verschiedene Setups: https://folk.computer/directory
-- Hardware (Montage) https://folk.computer/guides/hardware
+- [Verschiedene Setups im folk-Wiki](https://folk.computer/directory)
+- [Hardware (Montage)](https://folk.computer/guides/hardware)
   - Schnellstützstangen für Beamer und Webcam als Alternative zum Stativ
 
 ## Inhalt
