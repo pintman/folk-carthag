@@ -10,8 +10,8 @@
 
 - [x] 2.1 Testprogramm im Web-Editor drucken; prüfen, dass die neue `N.ps` `/PageSize [595 842]` enthält und `N.meta.folk` left + tagSize + right ≈ 210 mm ergibt
 - [x] 2.2 Druckvorschau im Editor auf dem Tisch einschalten; prüfen, dass der Rahmen etwa 210 × 297 mm misst
-- [ ] 2.3 Prüfen, ob `the calibrated print scale` bzw. `translation` gesetzt ist; falls ja, mit A4-Kalibrierblatt neu messen und dann 2.1 wiederholen
-- [ ] 2.4 Gedrucktes Testblatt auf den Tisch legen; prüfen, dass die Projektion bündig zum Blatt sitzt
+- [x] 2.3 Prüfen, ob `the calibrated print scale` bzw. `translation` gesetzt ist; falls ja, mit A4-Kalibrierblatt neu messen und dann 2.1 wiederholen
+- [x] 2.4 Gedrucktes Testblatt auf den Tisch legen; prüfen, dass die Projektion bündig zum Blatt sitzt (Ergebnis: Druckgeometrie stimmt, Versatz positionsabhängig → Kamera-Projektor-Kalibrierung, siehe TODO.md)
 
 ## 3. Dokumentation und Sicherung
 

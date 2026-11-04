@@ -36,3 +36,19 @@ springt die Animation (z. B. 8 Frames/4 Spalten: Frame 1 zeigt Kachel 5).
 - [ ] Optional upstream melden
 - Workaround bis dahin: einzeilige Spritesheets (`columns` = `frames`)
 - Hinweis: `frames` muss durch `columns` teilbar sein (Ganzzahldivision)
+
+## Kamera-Projektor-Kalibrierung findet keine Posen
+
+Stand 2026-11-04: Projektion sitzt nur in manchen Positionen bündig zum Blatt
+(Druckgeometrie A4 und Druck-Kalibrierung stimmen, Programm 15).
+
+- Projizierte Tags werden erkannt (RMSE < 1 px), scheitern aber an der
+  Stabilitätsprüfung (`calibrate.folk:394`, Ecken-Abweichung > 5 px über 3 Frames);
+  kein `WOULD APPEND` im Log
+- Kalibrierbild flackert: `draw-model.folk` erzeugt den Canvas bei jeder
+  Meldungsänderung neu (`Create canvas … board` tausendfach im Log)
+- Am 2026-11-03 19:11 lief die Kalibrierung noch (Belichtung damals 33900 µs, jetzt 41800 µs)
+- [ ] Belichtung 33900 µs testen
+- [ ] Canvas-Neuaufbau prüfen (Meldung aus dem `When` herauslösen?) → ggf. Patch
+- [ ] Danach neu kalibrieren, Testprogramm 15 an mehreren Positionen prüfen
+- Hinweis: Folk lädt alle Dateien in `folk-data/hold/` – Backups dort nicht ablegen
