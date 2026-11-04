@@ -21,7 +21,7 @@ Technisch ist Folk eine reaktive Datenbank aus Statements (`Claim`, `Wish`,
 |---|---|
 | `folk-data/program/` | Gedruckte Programme: `N.folk` (Code), `N.meta.folk` (Metadaten), `N.pdf`/`N.ps` (Druckvorlage) |
 | `folk-data/hold/` | Persistierter Zustand: `calibration` (Kamera/Projektor), `web__setup.folk` (Setup), `print.folk` |
-| `user-programs/carthag/` | Eigene Programme von carthag, die Folk beim Start lädt (andere Hosts nicht gesichert) |
+| `user-programs/carthag/` | Eigene Programme von carthag, die Folk beim Start lädt (andere Hosts nicht gesichert), u. a. `paper-format.folk` (A4 als Papierformat) |
 | `folk-videos/` | Beispielvideos für `video.folk` (Kopie von `~/folk-videos/`, wird nicht per `sync.sh` aktualisiert) |
 | `folk-patches/` | Lokale Patches am Folk-Quellcode (z. B. deutsche Tastatur), Anleitung jeweils im Patch-Kopf |
 
@@ -49,6 +49,23 @@ Patches danach im Folk-Repo anwenden:
 
 Bei neuer Hardware/geänderter Projektor- oder Kameraposition
 neu kalibrieren statt `hold/calibration` zurückzuspielen.
+
+## Papierformat
+
+Folk druckt auf carthag in A4. Festgelegt in `user-programs/carthag/paper-format.folk`:
+
+    Claim paper format a4 is the default paper format
+
+- Gilt für Druck aus Web-Editor und Tisch-Editor, Druckvorschau,
+  Kalibrierblatt und `lpr` (`-o media=a4`). Folk-Quellcode bleibt unverändert,
+  kein Patch nötig.
+- Nur hier festlegen: Ein zweiter Claim (z. B. im Web-Setup) lässt die Abfrage scheitern.
+- Rollback: Datei löschen, dann gilt wieder Upstream-Standard `letter`.
+- Alte Programme (`folk-data/program/0–12`) sind im Letter-Format gedruckt.
+  Auf A4-Papier sitzt die Projektion leicht versetzt, bei Bedarf neu drucken.
+- PDFs von Hand in **tatsächlicher Größe / 100 %** drucken, nicht „An Seite anpassen“.
+- Nach Formatwechsel Druck-Kalibrierung (`calibrated print scale/translation`)
+  mit A4-Kalibrierblatt neu messen.
 
 ## Eigene Programme schreiben: Was Folk mitbringt
 

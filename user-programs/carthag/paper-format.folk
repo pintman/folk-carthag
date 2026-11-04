@@ -1,0 +1,8 @@
+# Standard-Papierformat für Druck, Druckvorschau und Kalibrierblatt.
+# Ohne diesen Claim fällt Folk auf `letter` zurück.
+# Verfügbare Formate (letter, a4, indexcard) definiert Upstream in
+# builtin-programs/print/print.folk.
+# Nur hier festlegen: Ein zweiter Claim (z. B. im Web-Setup) lässt QueryOne! scheitern.
+# Rollback: Datei löschen, dann gilt wieder letter.
+
+Claim paper format a4 is the default paper format

@@ -1,0 +1,3 @@
+When editor /e/ has selected program /p/ {
+    Wish editor $e has a print preview
+}
