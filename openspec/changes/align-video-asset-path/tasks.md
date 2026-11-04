@@ -14,7 +14,7 @@
 - [x] 2.2 Dateien umziehen: `mkdir -p ~/folk/user-programs/carthag/video && mv ~/folk-videos/* ~/folk/user-programs/carthag/video/ && rmdir ~/folk-videos`; prüfen: `ls ~/folk-videos` schlägt fehl, `ls ~/folk/user-programs/carthag/video` zeigt alle Dateien
 - [x] 2.3 Neues `video.folk` übertragen: `rsync -avz user-programs/carthag/video.folk folk@carthag.local:/home/folk/folk/user-programs/carthag/`; prüfen: Folk-Log zeigt `fswatch: … video.folk updated, reloading.`
 - [x] 2.4 Am Tisch testen: Karten mit `"demo.mp4"`, `"tiere/katze.mp4"` spielen ab; `"gibtsnicht.mp4"` zeigt Fehler mit beiden durchsuchten Pfaden; Folk läuft weiter (Specs „Karte wird aufgelegt“, „Relativer Name“, „Datei fehlt“)
-- [ ] 2.5 `./sync.sh` ausführen; prüfen: kein Commit bzw. keine Änderungen unter `user-programs/carthag/video/` (Repo und carthag identisch)
+- [x] 2.5 `./sync.sh` ausführen; prüfen: kein Commit bzw. keine Änderungen unter `user-programs/carthag/video/` (Repo und carthag identisch)
 
 ## Workflow follow-up
 
