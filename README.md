@@ -113,6 +113,17 @@ Geänderte Programme zeigen „(edited …)“ als Titel.
 unter `http://<folk-rechner>:4273/page/<nr>` Das Programm kann dann im
 Editor bearbeitet und gespeichert werden.
 
+**Virtuelle Karten per Skript:** `./virtual-card.py` legt Karten ohne Papier an
+(wie `/new`, bleibt aber bis `rm` bestehen; mit `--save` auch nach Neustart).
+
+    ./virtual-card.py add hallo -c 'Wish $this is outlined blue' --x 40% --y 30% --angle 15
+    ./virtual-card.py add uhr -f uhr.folk --x 800 --y 400 --w 600 --h 400
+    ./virtual-card.py ls
+    ./virtual-card.py rm hallo
+
+`--x/--y` = Kartenmitte in Projektorpixeln oder %, `--w/--h` in Pixeln.
+Gleicher Name ersetzt die Karte (Verschieben/Code ändern).
+
 ### Beschriften & Hervorheben
 
 ```tcl
