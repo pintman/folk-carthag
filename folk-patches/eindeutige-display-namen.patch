@@ -1,0 +1,141 @@
+gpu: Gleichnamige Displays eindeutig benennen
+=============================================
+
+Erstellt: 2026-11-07, getestet auf Folk-Commit 11121f5
+
+Problem
+-------
+Mesa meldet über VK_KHR_display alle Ausgänge als "monitor" (auf carthag:
+eDP-1 intern 310x170 mm, HDMI-A-1 Beamer 700x390 mm). enumerate.folk und
+draw.folk identifizieren Displays nur über diesen Namen; initDisplay nimmt
+den ersten Treffer. Folge: Im Setup erscheint zweimal "monitor", und folk
+zeichnet immer auf das interne Display, nie auf den Beamer.
+
+Lösung
+------
+- Hilfsfunktion folkDisplayName() (identisch in enumerate.folk und
+  draw.folk): Bei doppeltem Namen wird die physische Größe angehängt,
+  z. B. "monitor-700x390mm"; bei gleicher Größe zusätzlich "-<index>".
+  Eindeutige Namen bleiben unverändert.
+- enumerate.folk meldet diesen Namen, draw.folk sucht danach.
+
+Nach dem Anwenden muss das Display im Setup neu gewählt werden; ein alter
+Hold-Eintrag "display monitor" passt nicht mehr (wird übersprungen).
+Achtung: Nicht im laufenden Betrieb einspielen. Der Live-Reload von
+gpu/draw.folk hat folk zum Absturz gebracht (GPU-Fehler).
+
+Anwenden
+--------
+  cd ~/folk && git apply ~/folk-patches/eindeutige-display-namen.patch
+
+diff --git a/builtin-programs/gpu/draw.folk b/builtin-programs/gpu/draw.folk
+index 30ff14a..3f5d5ad 100644
+--- a/builtin-programs/gpu/draw.folk
++++ b/builtin-programs/gpu/draw.folk
+@@ -51,6 +51,37 @@ if {$useGlfw} {
+ $cc extend $gpuLib
+ $cc extend $pipelineLib
+ 
++# Muss identisch zu folkDisplayName in gpu/enumerate.folk sein.
++$cc code {
++    #include <stdio.h>
++    #include <string.h>
++    // Mehrere Displays mit gleichem Namen (Mesa meldet z. B. alle als
++    // "monitor") werden um die physische Größe und ggf. den Index ergänzt.
++    static void folkDisplayName(VkDisplayPropertiesKHR* props, uint32_t count,
++                                uint32_t i, char* buf, size_t len) {
++        const char* name = props[i].displayName ? props[i].displayName : "";
++        int sameName = 0, sameSize = 0;
++        for (uint32_t j = 0; j < count; j++) {
++            const char* other = props[j].displayName ? props[j].displayName : "";
++            if (strcmp(name, other) != 0) continue;
++            sameName++;
++            if (props[j].physicalDimensions.width == props[i].physicalDimensions.width &&
++                props[j].physicalDimensions.height == props[i].physicalDimensions.height) {
++                sameSize++;
++            }
++        }
++        if (sameName <= 1) {
++            snprintf(buf, len, "%s", name);
++        } else if (sameSize <= 1) {
++            snprintf(buf, len, "%s-%ux%umm", name,
++                     props[i].physicalDimensions.width, props[i].physicalDimensions.height);
++        } else {
++            snprintf(buf, len, "%s-%ux%umm-%u", name,
++                     props[i].physicalDimensions.width, props[i].physicalDimensions.height, i);
++        }
++    }
++}
++
+ local proc vktry {call} { string map {\n " "} [csubst {{
+     VkResult res = $call;
+     if (res != VK_SUCCESS) {
+@@ -124,7 +155,9 @@ $cc proc initDisplay {char* display uint32_t width uint32_t height uint32_t refr
+             vkGetPhysicalDeviceDisplayPropertiesKHR(physicalDevice, &displayCount, displayProps);
+ 
+             for (uint32_t i = 0; i < displayCount; i++) {
+-                if (displayProps[i].displayName && strcmp(displayProps[i].displayName, display) == 0) {
++                char displayName[256];
++                folkDisplayName(displayProps, displayCount, i, displayName, sizeof(displayName));
++                if (strcmp(displayName, display) == 0) {
+                     chosenDisplay = displayProps[i].display;
+                     break;
+                 }
+diff --git a/builtin-programs/gpu/enumerate.folk b/builtin-programs/gpu/enumerate.folk
+index 936dbf2..9fc0727 100644
+--- a/builtin-programs/gpu/enumerate.folk
++++ b/builtin-programs/gpu/enumerate.folk
+@@ -5,6 +5,37 @@ $cc code {
+     #include "volk/volk.h"
+ }
+ 
++# Muss identisch zu folkDisplayName in gpu/draw.folk sein.
++$cc code {
++    #include <stdio.h>
++    #include <string.h>
++    // Mehrere Displays mit gleichem Namen (Mesa meldet z. B. alle als
++    // "monitor") werden um die physische Größe und ggf. den Index ergänzt.
++    static void folkDisplayName(VkDisplayPropertiesKHR* props, uint32_t count,
++                                uint32_t i, char* buf, size_t len) {
++        const char* name = props[i].displayName ? props[i].displayName : "";
++        int sameName = 0, sameSize = 0;
++        for (uint32_t j = 0; j < count; j++) {
++            const char* other = props[j].displayName ? props[j].displayName : "";
++            if (strcmp(name, other) != 0) continue;
++            sameName++;
++            if (props[j].physicalDimensions.width == props[i].physicalDimensions.width &&
++                props[j].physicalDimensions.height == props[i].physicalDimensions.height) {
++                sameSize++;
++            }
++        }
++        if (sameName <= 1) {
++            snprintf(buf, len, "%s", name);
++        } else if (sameSize <= 1) {
++            snprintf(buf, len, "%s-%ux%umm", name,
++                     props[i].physicalDimensions.width, props[i].physicalDimensions.height);
++        } else {
++            snprintf(buf, len, "%s-%ux%umm-%u", name,
++                     props[i].physicalDimensions.width, props[i].physicalDimensions.height, i);
++        }
++    }
++}
++
+ $cc proc enumerateDisplays {} Jim_Obj* {
+     FOLK_ENSURE(volkInitialize() == VK_SUCCESS);
+ 
+@@ -79,11 +110,14 @@ $cc proc enumerateDisplays {} Jim_Obj* {
+                 Jim_ListAppendElement(interp, modesList, modeDict);
+             }
+ 
++            char displayName[256];
++            folkDisplayName(displayProps, displayCount, i, displayName, sizeof(displayName));
++
+             int modesLen;
+             const char *modesStr = Jim_GetString(modesList, &modesLen);
+             Jim_Obj *displayDict = Jim_ObjPrintf("name {%s} physicalDimensions {%u %u} "
+                                                  "physicalResolution {%u %u} modes {%s}",
+-                displayProps[i].displayName ? displayProps[i].displayName : "",
++                displayName,
+                 displayProps[i].physicalDimensions.width,
+                 displayProps[i].physicalDimensions.height,
+                 displayProps[i].physicalResolution.width,
