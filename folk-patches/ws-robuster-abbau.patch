@@ -1,0 +1,83 @@
+ws: WebSocket-Abbau robust machen, damit web.folk nicht abstürzt
+=================================================================
+
+Erstellt: 2026-11-09, getestet auf Folk-Commit 11121f5
+
+Problem
+-------
+Setup-/Web-Seite (Port 4273) plötzlich nicht mehr erreichbar, obwohl
+Folk weiterläuft. In /var/tmp/folk-<pid>/OTHER.stderr steht ein
+Stacktrace aus {WsConnection onChanWritable} lib/ws.tcl, der bis in
+web.folk durchschlägt ("web.folk failed to initialize"). Der Web-Thread
+ist damit beendet, der Listen-Socket weg. Aufgetreten am 2026-11-05 und
+2026-11-09, jeweils beim Schließen/Neuladen von Browser-Tabs.
+
+Ursache: Schlägt in onChanReadable/onChanWritable etwas fehl, ruft der
+on-error-Handler `$self destroy` auf. Ist destroy (teilweise) schon
+gelaufen, wirft der zweite Aufruf (close auf geschlossenem Kanal bzw.
+umbenanntes Objekt) – dieser Fehler im Handler wird nicht mehr
+abgefangen und beendet die Event-Loop von web.folk.
+
+Lösung
+------
+- destroy idempotent: nur ausführen, wenn ctx noch in ::wsConnections
+  registriert ist (verhindert auch doppeltes wsDestroy/Free); einzelne
+  Schritte per catch, Fehler werden nach stderr geloggt.
+- on-error-Handler rufen destroy per catch auf.
+- upgrade registriert die Verbindung vor dem ersten
+  updateChanReadableWritable (das evtl. schon destroy aufruft).
+
+Einspielen: cd ~/folk && git apply ~/folk-patches/ws-robuster-abbau.patch
+
+diff --git a/lib/ws.tcl b/lib/ws.tcl
+index 5e082af..a6a4178 100644
+--- a/lib/ws.tcl
++++ b/lib/ws.tcl
+@@ -206,7 +206,7 @@ WsConnection method onChanReadable {} {
+         $wsLib wsReadable $ctx
+         $self updateChanReadableWritable
+     } on error e {
+-        $self destroy
++        catch {$self destroy}
+     }
+ }
+ WsConnection method onChanWritable {} {
+@@ -214,7 +214,7 @@ WsConnection method onChanWritable {} {
+         $wsLib wsWritable $ctx
+         $self updateChanReadableWritable
+     } on error e {
+-        $self destroy
++        catch {$self destroy}
+     }
+ }
+ WsConnection method updateChanReadableWritable {} {
+@@ -243,11 +243,15 @@ WsConnection method onMsgRecv {msg} {
+ }
+ 
+ WsConnection method destroy {} {
++    # Idempotent: a second destroy (e.g. from an on-error handler after
++    # a partly failed first destroy) must neither throw nor free ctx twice,
++    # otherwise the error escapes the event loop and kills web.folk.
++    if {![dict exists $::wsConnections $ctx]} { return }
+     dict unset ::wsConnections $ctx
+-    close $chan
+-    $wsLib wsDestroy $ctx
+-    {*}$destructor
+-    rename $self ""
++    catch {close $chan}
++    if {[catch {$wsLib wsDestroy $ctx} e]} { puts stderr "ws: wsDestroy: $e" }
++    if {[catch {{*}$destructor} e]} { puts stderr "ws: destructor: $e" }
++    catch {rename $self ""}
+ }
+ 
+ $wsPipeRead readable [lambda {} {wsLib} {
+@@ -285,7 +289,8 @@ Sec-WebSocket-Accept: $acceptKey\r
+     }]]
+     $conn eval [list set ctx $ctx]
+ 
+-    $conn updateChanReadableWritable
++    # Register before the first update, which may already destroy conn.
+     dict set ::wsConnections $ctx $conn
++    $conn updateChanReadableWritable
+     return $conn
+ }
