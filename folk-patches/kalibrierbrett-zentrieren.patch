@@ -1,0 +1,51 @@
+Kalibrierbrett: Tag-Raster horizontal zentrieren
+================================================
+
+Erstellt: 2026-11-09, getestet auf Folk-Commit 11121f5
+
+Problem
+-------
+calibration-board.folk platziert das Tag-Raster mit festem linkem Rand
+(48 pt). Auf A4 (595 pt breit) endet die rechte Spalte dann nur ~10 pt
+(3,6 mm) vor dem Papierrand – innerhalb des nicht bedruckbaren Rands
+der meisten Drucker. Die äußeren Datenbits der gedruckten Tags 48603,
+48611 und 48619 werden abgeschnitten und nicht mehr erkannt.
+Folge: Bei der Kalibrierung werden höchstens 7 von 10 gedruckten Tags
+gesehen, calibrate.folk verlangt aber ROWS+COLS = 9 → es wird nie eine
+Pose aufgenommen ("0/10 poses").
+
+Lösung
+------
+Das Tag-Raster wird horizontal zentriert (A4: ~10 mm links und rechts).
+Die Messmarken (measureLeft/measureTop) bleiben unverändert, gespeicherte
+Druck-Kalibrierungen bleiben also gültig. Das Brett muss neu gedruckt
+werden.
+
+diff --git a/builtin-programs/calibrate/calibration-board.folk b/builtin-programs/calibrate/calibration-board.folk
+index 48e70c4..2e08e75 100644
+--- a/builtin-programs/calibrate/calibration-board.folk
++++ b/builtin-programs/calibrate/calibration-board.folk
+@@ -62,6 +62,14 @@ fn makeCalibrationBoardPs {} {
+ 
+     set tagOuterLengthPs [expr {$tagInnerSideLength * 10/6}]
+ 
++    # Center the tag grid horizontally. With a fixed left margin, the
++    # rightmost column ends ~3.6mm from the right edge on A4, inside
++    # most printers' unprintable margin, so its outer data bits get
++    # clipped and those tags become undetectable.
++    set COLS [$modelLib cols]
++    set boardWidthPs [expr {$COLS*$tagOuterLengthPs + ($COLS-1)*$tagInnerSideLength/3.0}]
++    set tagsLeft [expr {($PageWidth - $boardWidthPs) / 2.0}]
++
+     set H_modelToPs [$matLib estimateHomography [subst {
+         {1 1 $tagInnerSideLength $tagInnerSideLength}
+         {1 0 $tagInnerSideLength 0}
+@@ -156,7 +164,7 @@ fn makeCalibrationBoardPs {} {
+         % We should flip the coordinate system to match the model coordinate system,
+         % so (0, 0) is top-left.
+         1 -1 scale
+-        $marginLeft [- $marginTop $PageHeight] translate        
++        $tagsLeft [- $marginTop $PageHeight] translate
+ 
+         [set tagIdx -1]
+         [join [lmap {id modelTag} $model {
