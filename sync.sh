@@ -12,11 +12,3 @@ PATCHES=/home/folk/folk-patches
 rsync -avz --delete --exclude trocr/ "$REMOTE:$FOLK_DATA/"     ./folk-data/
 rsync -avz --delete                  "$REMOTE:$USER_PROGRAMS/" ./user-programs/carthag/
 rsync -avz --delete                  "$REMOTE:$PATCHES/"       ./folk-patches/
-
-git add -A
-if git diff --cached --quiet; then
-    echo "Keine Änderungen."
-else
-    git commit -q -m "chore: Sync von carthag $(date '+%F %T')"
-    echo "Commit erstellt."
-fi
