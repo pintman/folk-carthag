@@ -27,31 +27,65 @@ Lösung
 - upgrade registriert die Verbindung vor dem ersten
   updateChanReadableWritable (das evtl. schon destroy aufruft).
 
-Einspielen: cd ~/folk && git apply ~/folk-patches/ws-robuster-abbau.patch
+Nachtrag 2026-11-09 (Absturz trat trotz obiger Änderungen erneut auf)
+---------------------------------------------------------------------
+Eigentliche Ursache: send() in send_callback lief ohne MSG_NOSIGNAL.
+Schreiben auf einen vom Browser bereits geschlossenen Socket löst SIGPIPE
+aus. web.folk behandelt SIGPIPE (`signal handle SIGPIPE`), Jim liefert
+dann den Rückgabecode "signal" statt "error" – `try ... on error` fängt
+das nicht, das Signal läuft durch bis `vwait forever` und beendet den
+Web-Thread (Stacktrace oben in wsWritable, lib/ws.tcl:214).
+- send() mit MSG_NOSIGNAL -> EPIPE statt SIGPIPE, landet als normaler
+  Fehler im on-error-Handler.
+- onChanReadable/onChanWritable zusätzlich mit `try -signal ... on signal`.
+
 
 diff --git a/lib/ws.tcl b/lib/ws.tcl
-index 5e082af..a6a4178 100644
+index 5e082af..b5fc94d 100644
 --- a/lib/ws.tcl
 +++ b/lib/ws.tcl
-@@ -206,7 +206,7 @@ WsConnection method onChanReadable {} {
+@@ -41,7 +41,11 @@ $cc code {
+         WsSession* session = (WsSession*) user_data;
+ 
+         ssize_t r;
+-        int sflags = 0;
++        // MSG_NOSIGNAL: a peer that already closed must yield EPIPE, not
++        // SIGPIPE -- web.folk handles SIGPIPE, which Jim turns into a
++        // signal return code that `on error` doesn't catch and that kills
++        // the web event loop.
++        int sflags = MSG_NOSIGNAL;
+ #ifdef MSG_MORE
+         if(flags & WSLAY_MSG_MORE) {
+             sflags |= MSG_MORE;
+@@ -202,19 +206,23 @@ class WsConnection {
+     destructor {}
+ }
+ WsConnection method onChanReadable {} {
+-    try {
++    try -signal {
          $wsLib wsReadable $ctx
          $self updateChanReadableWritable
      } on error e {
 -        $self destroy
 +        catch {$self destroy}
++    } on signal sig {
++        catch {$self destroy}
      }
  }
  WsConnection method onChanWritable {} {
-@@ -214,7 +214,7 @@ WsConnection method onChanWritable {} {
+-    try {
++    try -signal {
          $wsLib wsWritable $ctx
          $self updateChanReadableWritable
      } on error e {
 -        $self destroy
 +        catch {$self destroy}
++    } on signal sig {
++        catch {$self destroy}
      }
  }
  WsConnection method updateChanReadableWritable {} {
-@@ -243,11 +243,15 @@ WsConnection method onMsgRecv {msg} {
+@@ -243,11 +251,15 @@ WsConnection method onMsgRecv {msg} {
  }
  
  WsConnection method destroy {} {
@@ -71,7 +105,7 @@ index 5e082af..a6a4178 100644
  }
  
  $wsPipeRead readable [lambda {} {wsLib} {
-@@ -285,7 +289,8 @@ Sec-WebSocket-Accept: $acceptKey\r
+@@ -285,7 +297,8 @@ Sec-WebSocket-Accept: $acceptKey\r
      }]]
      $conn eval [list set ctx $ctx]
  
