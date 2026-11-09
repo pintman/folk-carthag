@@ -2,7 +2,7 @@ builtin-programs/web/setup.folk
 
 {camera /dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0} {when {Wish $::thisNode uses camera "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0" with width 1920 height 1080 framerate 30.0} with environment {}}
 {exposure /dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0} {when {
-          Wish camera /dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0 uses exposure time 29600 us
+          Wish camera /dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0 uses exposure time 20200 us
         } with environment {}}
 {camera /dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0 detects tags} {when {Wish camera "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0" detects tags} with environment {}}
 {display monitor-508x286mm-1} {when {Wish $::thisNode uses display "monitor-508x286mm-1" with width 1920 height 1080 refreshRate 60000} with environment {}}
