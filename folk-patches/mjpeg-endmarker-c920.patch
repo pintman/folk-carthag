@@ -1,0 +1,73 @@
+camera/usb: MJPEG-Frames am JPEG-Endmarker abschneiden (C920 ruckelt sonst)
+============================================================================
+
+Erstellt: 2026-11-09, getestet auf Folk-Commit 11121f5
+
+Problem
+-------
+Die Webcam (Logitech C920, 1920x1080 MJPEG, 30 fps) reagiert sehr träge.
+In /var/tmp/folk-<pid>/builtin-programs__camera__usb.folk.stderr stehen
+massenhaft Zeilen wie
+  camera/usb: fd 164 dropped corrupt MJPEG frame (382432 bytes, flags 0x12001, total 4680)
+– rund 30 pro Sekunde, also fast jedes Bild. Das ERROR-Flag (0x40) ist
+nicht gesetzt, die Frames sind eigentlich in Ordnung.
+
+Ursache: camera_capture() verlangt, dass der Puffer mit FF D9 endet
+(höchstens 7 Null-Füllbytes davor). Bei der C920 ist bytesused aber
+größer als das JPEG: nach dem Endmarker FF D9 folgen Nullen oder alte
+Bytes eines früheren, größeren Frames im selben Puffer, z. B.
+  ... 47 ff d9 ff 00 f7 15 5a 4f f6 7e 84 7a 55 a0 b1 13 3b ...
+Dadurch wurden fast alle Bilder verworfen; cameraFrameJpeg wartete, bis
+zufällig eines passte.
+
+Lösung
+------
+Rückwärts (max. 64 KiB) nach dem letzten FF D9 suchen und den Frame dort
+abschneiden; nur dieser Teil wird kopiert. FF D9 kann in den
+entropiecodierten JPEG-Daten nicht vorkommen (FF wird als FF 00
+maskiert), die Suche ist also sicher. Frames mit gesetztem ERROR-Flag
+werden weiterhin verworfen.
+
+Ergebnis: keine verworfenen Frames mehr außer echten Fehlern (Flag 0x40).
+
+Einspielen: cd ~/folk && git apply ~/folk-patches/mjpeg-endmarker-c920.patch
+
+diff --git a/builtin-programs/camera/usb.folk b/builtin-programs/camera/usb.folk
+index 6c84c6e..260cd05 100644
+--- a/builtin-programs/camera/usb.folk
++++ b/builtin-programs/camera/usb.folk
+@@ -212,12 +212,18 @@ $camc code {
+         CameraBuffer source = camera->buffers[buf.index];
+         bool valid = !(buf.flags & V4L2_BUF_FLAG_ERROR) &&
+             buf.bytesused >= 4 && buf.bytesused <= source.length;
++        size_t jpegLength = buf.bytesused;
+         if (valid) {
+-            // Some webcams pad MJPEG frames to an 8-byte boundary.
+-            // Allow at most seven zero bytes after the JPEG end marker.
+-            size_t jpegLength = buf.bytesused;
+-            for (int padding = 0; padding < 7 && jpegLength > 4 &&
+-                    source.start[jpegLength-1] == 0; padding++) {
++            // Some webcams (e.g. Logitech C920) report a bytesused that
++            // is larger than the actual JPEG: after the end marker
++            // (FF D9) come zero padding or stale bytes left over from an
++            // earlier, larger frame in the same buffer. FF D9 cannot occur
++            // inside entropy-coded JPEG data (FF is stuffed as FF 00), so
++            // search backwards for the end marker and cut the frame there.
++            size_t minLength = buf.bytesused > 65536 ? buf.bytesused - 65536 : 4;
++            while (jpegLength > minLength &&
++                   !(source.start[jpegLength-2] == 0xff &&
++                     source.start[jpegLength-1] == 0xd9)) {
+                 jpegLength--;
+             }
+             valid = source.start[0] == 0xff && source.start[1] == 0xd8 &&
+@@ -225,8 +231,8 @@ $camc code {
+                 source.start[jpegLength-1] == 0xd9;
+         }
+         if (valid) {
+-            memcpy(camera->head.start, source.start, buf.bytesused);
+-            camera->head.length = buf.bytesused;
++            memcpy(camera->head.start, source.start, jpegLength);
++            camera->head.length = jpegLength;
+         } else {
+             camera->dropped_frames++;
+             if (camera->dropped_frames <= 3 || camera->dropped_frames % 120 == 0) {
