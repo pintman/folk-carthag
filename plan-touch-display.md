@@ -16,6 +16,7 @@ Interaktive Displays (z. B. **Prowise Touchscreen**) und günstige **IR-Touchrah
   lsusb
   sudo libinput list-devices | grep -i -A5 touch
   sudo evtest            # Gerät wählen, Board antippen
+  sudo libinput debug-events   # wie viele Touchpunkte kommen gleichzeitig an?
   dmesg | tail           # direkt nach dem Einstecken
   ```
 - Touch dem richtigen Bildschirm zuordnen:
@@ -79,11 +80,21 @@ Ein Repo mit niri-Konfiguration oder Dotfiles wurde nicht gefunden.
 
 ## 5. Software-Varianten
 
-### Variante A: Standard-Desktop (schnell, wenig Code)
+**Grundsatzentscheidung:** Linux ohne Desktop → Kiosk-Compositor (siehe Abschnitt 6) → eine eigene Vollbild-App (Variante B oder C).
 
-- **GNOME unter Wayland**: beste Touch-Unterstützung und als einziges eine eingebaute Bildschirmtastatur
+**Warum kein klassischer Desktop?**
+- Unter X11 funktioniert Multitouch nur schlecht → nur Wayland kommt in Frage.
+- Wayland schickt jeden Touchpunkt an das Fenster unter dem Finger. Parallele Eingaben in verschiedenen Apps klappen also.
+- Drag & Drop, Fenster verschieben und Tastaturfokus gibt es aber **nur einmal pro System**. Zwei Personen können nicht gleichzeitig Dateien ziehen.
+- Desktops sind in eine Richtung ausgerichtet. An einem Tisch schauen Leute aber von allen Seiten drauf.
+- → Eine eigene Vollbild-App, die Multitouch selbst verarbeitet, ist für einen Tisch mit mehreren Nutzern besser geeignet.
+
+### Variante A: Standard-Desktop (Fallback für einzelne Nutzer)
+
+- **GNOME unter Wayland**: beste Touch-Unterstützung und eingebaute Bildschirmtastatur
+- **KDE Plasma 6 unter Wayland**: Touch-Modus, Randgesten, Bildschirmtastatur, Touchscreen lässt sich einem Monitor zuordnen
 - Nautilus (Dateien), GNOME Text Editor, Papers/Evince (PDF), Loupe (Bilder)
-- Drag & Drop zwischen Apps geht, ist aber nicht auf einen Tisch ausgelegt
+- Drag & Drop zwischen Apps geht, ist aber nicht auf einen Tisch ausgelegt (s. o.)
 - wirkt eher wie ein großes Tablet
 
 ### Variante B: eigene Canvas-Web-App (empfohlen)
@@ -93,7 +104,7 @@ Alle Inhalte liegen als frei bewegliche Karten auf einer Fläche.
 | Ebene | Empfehlung |
 |---|---|
 | OS | Debian 13 oder Fedora |
-| Compositor | **cage** (Kiosk, eine App im Vollbild) oder **niri** |
+| Compositor | **cage** (Kiosk, eine App im Vollbild), **Weston** oder **niri** (siehe Abschnitt 6) |
 | Laufzeit | Chromium im Kiosk-Modus: `chromium --kiosk --ozone-platform=wayland --touch-events=enabled <URL>` |
 | Autostart | Autologin + systemd-User-Service mit cage |
 | Canvas | **Excalidraw** (MIT) oder **Konva.js**/PixiJS (selbst gebaut). Alternative **tldraw**: für Produktivbetrieb Lizenzschlüssel nötig, kostenlose Hobby-Lizenz für nicht-kommerzielle Nutzung, mit Wasserzeichen und Prüfung der Anfrage |
@@ -125,9 +136,112 @@ Alle Inhalte liegen als frei bewegliche Karten auf einer Fläche.
 └─────────────────────────────────────────────┘
 ```
 
+### Variante C: native Kivy-App (Python)
+
+Kivy wurde ursprünglich für Multitouch-Tische entwickelt. Jeder Finger ist ein eigenes Touch-Ereignis mit eigener ID.
+
+Wichtige Bausteine:
+- **`Scatter`**: jedes Objekt gleichzeitig verschieben, drehen und skalieren. So kann jede Person Inhalte zu sich drehen.
+- `on_touch_down/move/up` und `touch.grab()` für eigene Gesten
+- Fertige Widgets: `FileChooser`, `TextInput`, `Image`, `Video`, `VKeyboard` (Bildschirmtastatur)
+- TUIO-Unterstützung für späteres kamerabasiertes Tracking
+- Optional KivyMD für Material-Design-Widgets
+
+Minimalbeispiel:
+```python
+from kivy.app import App
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.scatter import Scatter
+from kivy.uix.image import Image
+from kivy.core.window import Window
+
+class Tisch(App):
+    def build(self):
+        Window.fullscreen = 'auto'
+        root = FloatLayout()
+        for i, f in enumerate(['a.jpg', 'b.jpg', 'c.jpg']):
+            s = Scatter(size=(400, 300), pos=(100 + i * 450, 300),
+                        do_rotation=True, do_scale=True)
+            s.add_widget(Image(source=f, size=s.size))
+            root.add_widget(s)
+        return root
+
+Tisch().run()
+```
+
+Start:
+```bash
+SDL_VIDEODRIVER=wayland cage -- python3 app.py
+```
+
+Stolperstellen:
+- **Herkunft der Touch-Eingaben:** über SDL/Wayland (einfach) oder direkt von den Eingabegeräten (`hidinput`/`mtdev`). Der direkte Weg ist oft genauer bei vielen Fingern, braucht aber `sudo usermod -aG input $USER`.
+- **Doppelte Ereignisse**, weil das Board zusätzlich Mausereignisse sendet → `~/.kivy/config.ini`:
+  ```ini
+  [input]
+  mouse = mouse,disable_on_activity
+  ```
+
+Weitere native Alternative: **Qt Quick/QML** mit `MultiPointTouchArea` / `PointHandler`.
+
+### Vergleich B vs. C
+
+| | B: Web-App | C: Kivy |
+|---|---|---|
+| Dateianzeige (PDF, Video) | sehr gut (pdf.js, `<video>`) | eingeschränkt, PDF nur mit Zusatzbibliothek |
+| Texteditor | CodeMirror/TipTap | `TextInput` (einfach) |
+| Multitouch/Gesten | Pointer Events, selbst oder per Canvas-Bibliothek | `Scatter` fertig eingebaut |
+| Entwicklung | Hot Reload vom Laptop | Python, kein Build |
+
 ---
 
-## 6. Stolperfallen
+## 6. Kiosk-Compositor
+
+### Cage (erste Wahl)
+Minimaler Wayland-Compositor auf Basis von wlroots. Startet genau eine Anwendung im Vollbild, ohne Fenster, Panel oder Desktop.
+
+```bash
+sudo apt install cage wlr-randr
+cage -- python3 app.py          # oder: cage -- chromium --kiosk ...
+```
+
+| Option / Werkzeug | Zweck |
+|---|---|
+| `-s` | Wechsel auf andere Konsolen (TTYs) mit Strg+Alt+F-Taste erlauben (Debugging) |
+| `-m extend` | Anzeige auf mehrere Monitore verteilen |
+| `wlr-randr --output HDMI-A-1 --transform 180` | Bild zur Laufzeit drehen |
+| systemd-Unit oder `greetd` | Autostart |
+
+- Touch läuft über libinput und funktioniert ohne Konfiguration.
+- Nachteil: wenige Optionen, kein Kalibrierwerkzeug.
+
+### Weston (mehr Optionen)
+Referenz-Compositor des Wayland-Projekts. Mit der kiosk-shell läuft jede App im Vollbild.
+
+`~/.config/weston.ini`:
+```ini
+[core]
+shell=kiosk-shell.so
+idle-time=0
+
+[output]
+name=HDMI-A-1
+transform=rotate-180
+
+[autolaunch]
+path=/usr/bin/python3 /home/USER/app.py
+```
+
+- Touch-Kalibrierung mit `weston-touch-calibrator`, wenn das Bild versetzt zur Touchfläche liegt.
+- Apps lassen sich per App-ID festen Monitoren zuordnen (`app-ids=` im `[output]`-Block).
+- Wechseln, wenn Cage nicht reicht, z. B. wegen Kalibrierung oder mehrerer Monitore.
+
+### niri
+Wie bei Grant Custer: wenn Bild und Touch nur auf einen Teilbereich des Displays gelegt werden sollen (`map-to-output`).
+
+---
+
+## 7. Stolperfallen
 
 1. **Die HTML5-Drag-&-Drop-API funktioniert per Touch unter Linux unzuverlässig.** Verschieben mit Pointer Events selbst umsetzen (Canvas-Bibliotheken tun das bereits).
 2. **Bildschirmtastatur:** Chromium bringt unter Linux keine mit.
@@ -142,7 +256,7 @@ Alle Inhalte liegen als frei bewegliche Karten auf einer Fläche.
 
 ---
 
-## 7. Entwicklung
+## 8. Entwicklung
 
 - Vite-Dev-Server mit `npm run dev -- --host` auf dem Laptop starten, den Tisch-Browser auf diese Adresse zeigen lassen. Änderungen erscheinen dann sofort auf dem Tisch (Hot Reload).
 - Fernzugriff auf den Tisch per SSH.
@@ -150,7 +264,20 @@ Alle Inhalte liegen als frei bewegliche Karten auf einer Fläche.
 
 ---
 
-## 8. Mögliche Aufteilung als Unterrichtsprojekt (FIAE/ITA)
+## 9. Vorgehen
+
+- [ ] Prowise-Board per USB anschließen und prüfen, ob es erkannt wird (Treiber `hid-multitouch`, siehe Abschnitt 1)
+- [ ] `libinput list-devices` / `libinput debug-events`: Wie viele Touchpunkte kommen gleichzeitig an?
+- [ ] Cage installieren, Minimalbeispiel (Kivy oder Chromium-Kiosk) unter Cage starten
+- [ ] Mit mehreren Personen gleichzeitig testen: Kommt jeder Finger einzeln an? Gibt es Verzögerungen?
+- [ ] Bei Versatz oder mehreren Monitoren: zu Weston wechseln und kalibrieren
+- [ ] Entscheidung Variante B oder C
+- [ ] Funktionen umsetzen: Dateien anzeigen, Text bearbeiten (inkl. Bildschirmtastatur), Objekte per Drag & Drop verschieben/drehen/skalieren
+- [ ] Autostart per systemd
+
+---
+
+## 10. Mögliche Aufteilung als Unterrichtsprojekt (FIAE/ITA)
 
 | Team | Aufgabe |
 |---|---|
@@ -170,4 +297,7 @@ Alle Inhalte liegen als frei bewegliche Karten auf einer Fläche.
 - [Tabletop demos](https://tabletop.grantcuster.com/)
 - [GrantCuster auf GitHub](https://github.com/GrantCuster)
 - [niri](https://github.com/niri-wm/niri)
+- [Cage](https://github.com/cage-kiosk/cage)
+- [Weston](https://gitlab.freedesktop.org/wayland/weston)
+- [Kivy](https://kivy.org/doc/stable/)
 - [tldraw – FAQ](https://tldraw.dev/faq) · [tldraw – License key](https://tldraw.dev/sdk-features/license-key)
